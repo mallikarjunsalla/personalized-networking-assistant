@@ -15,7 +15,7 @@ st.set_page_config(
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-BACKEND_URL = " https://networking-backend-1mi1.onrender.com "
+BACKEND_URL = " https://networking-backend-imi1.onrender.com "
 
 # Inject premium dark theme CSS
 st.markdown("""
