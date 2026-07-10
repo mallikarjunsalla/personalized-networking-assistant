@@ -46,7 +46,7 @@ html, body, [class*="css"], .stApp {
 /* Clean up Streamlit Default Components */
 header[data-testid="stHeader"] {
     display: none !important;
-    visibility: hidden !important;
+    visibility: visible !important;
     height: 0px !important;
 }
 footer {
