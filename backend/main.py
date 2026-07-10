@@ -17,6 +17,9 @@ app = FastAPI(
     description="Backend services for theme extraction, message generation, and Wikipedia fact-checking.",
     version="1.0.0"
 )
+@app.get("/")
+def home():
+    return {"status": "healthy", "message": "Backend is running flawlessly"}
 
 # Configure CORS
 app.add_middleware(
