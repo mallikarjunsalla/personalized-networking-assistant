@@ -4,871 +4,1075 @@ import datetime
 import logging
 import pandas as pd
 
-# Page configuration
+# ─────────────────────────────────────────────────────────────
+#  PAGE CONFIG
+# ─────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="Personalized Networking Assistant | SaaS Portal",
+    page_title="Networking Assistant · Pro",
     page_icon="🤝",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
 )
 
-# Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 BACKEND_URL = "https://networking-backend-1mi1.onrender.com"
 
-# Quietly check backend connectivity
+# ─────────────────────────────────────────────────────────────
+#  SILENT BACKEND HEALTH CHECK
+# ─────────────────────────────────────────────────────────────
 api_healthy = False
 try:
-    res = requests.get(f"{BACKEND_URL}/health", timeout=1.5)
-    if res.status_code == 200:
+    _h = requests.get(f"{BACKEND_URL}/health", timeout=1.5)
+    if _h.status_code == 200:
         api_healthy = True
 except Exception:
     pass
 
-# Inject premium dark theme CSS and custom workspace menu styling
+# ─────────────────────────────────────────────────────────────
+#  GLOBAL CSS  ·  NO header hiding — sidebar toggle stays alive
+# ─────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+/* ── Google Font ─────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-/* Main font override */
 html, body, [class*="css"], .stApp {
-    font-family: 'Outfit', sans-serif !important;
+    font-family: 'Inter', sans-serif !important;
 }
 
-/* Deep modern background */
+/* ── App Background ──────────────────────────────────────── */
 .stApp {
-    background: linear-gradient(135deg, #070b13 0%, #101625 50%, #070b13 100%) !important;
-    color: #f1f5f9 !important;
+    background-color: #121214 !important;
+    color: #E2E8F0 !important;
 }
 
-/* Clean up Streamlit Default Components */
-header[data-testid="stHeader"] {
-    display: none !important;
-    visibility: visible !important;
-    height: 0px !important;
-}
-footer {
-    display: none !important;
-    visibility: hidden !important;
-    height: 0px !important;
-}
-div[data-testid="stDecoration"] {
-    display: none !important;
-    visibility: hidden !important;
-}
-div[data-testid="stToolbar"] {
-    display: none !important;
-    visibility: hidden !important;
-}
-#MainMenu {
-    display: none !important;
-    visibility: hidden !important;
-}
-.stAppDeployButton {
-    display: none !important;
-    visibility: hidden !important;
-}
-.viewerBadge_container__1712a {
-    display: none !important;
-}
-
-/* Reduce Streamlit container padding */
+/* ── Hide ONLY deploy / share / fork buttons — NOT the header ── */
+.stAppDeployButton          { display: none !important; }
+.viewerBadge_container__r5tak { display: none !important; }
+button[title="View app in Streamlit Community Cloud"] { display: none !important; }
+/* reduce default top padding so page starts cleanly */
 .block-container {
-    padding-top: 2rem !important;
-    padding-bottom: 2.5rem !important;
+    padding-top: 1.75rem !important;
+    padding-bottom: 3rem !important;
+    max-width: 1200px !important;
 }
 
-/* Sidebar Custom Styling */
+/* ── Sidebar ──────────────────────────────────────────────── */
 section[data-testid="stSidebar"] {
-    background-color: #0b0f19 !important;
-    border-right: 1px solid rgba(99, 102, 241, 0.15) !important;
+    background-color: #1A1A20 !important;
+    border-right: 1px solid #2A2A35 !important;
 }
-section[data-testid="stSidebar"] [data-testid="stSidebarCollapseButton"] {
-    color: #818cf8 !important;
+section[data-testid="stSidebar"] > div:first-child {
+    padding-top: 1.25rem !important;
 }
 
-/* Sidebar Account Card */
-.user-profile-card {
-    background: linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.5) 100%);
-    border: 1px solid rgba(99, 102, 241, 0.2);
-    border-radius: 12px;
-    padding: 1rem;
-    margin-bottom: 1.5rem;
-    backdrop-filter: blur(8px);
+/* ── Login card ──────────────────────────────────────────── */
+.login-card {
+    background: #1E1E24;
+    border: 1px solid #2E2E3A;
+    border-radius: 14px;
+    padding: 1.4rem 1.2rem;
+    margin-bottom: 1rem;
 }
-.avatar-container {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 0.75rem;
-}
-.user-avatar {
-    width: 40px;
-    height: 40px;
-    background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-    color: white;
+.login-title {
+    font-size: 1rem;
     font-weight: 700;
+    color: #C4B5FD;
+    margin-bottom: 0.1rem;
+    letter-spacing: 0.02em;
+}
+.login-sub {
+    font-size: 0.73rem;
+    color: #64748B;
+    margin-bottom: 1rem;
+}
+
+/* ── Profile card ────────────────────────────────────────── */
+.profile-card {
+    background: linear-gradient(135deg, #1E1E2A 0%, #16161E 100%);
+    border: 1px solid #2E2E3A;
+    border-radius: 14px;
+    padding: 1.25rem 1.1rem;
+    margin-bottom: 1rem;
+    text-align: center;
+}
+.profile-avatar {
+    width: 64px;
+    height: 64px;
     border-radius: 50%;
+    background: linear-gradient(135deg, #8B5CF6, #6366F1);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.9rem;
-    box-shadow: 0 0 10px rgba(99, 102, 241, 0.35);
+    margin: 0 auto 0.65rem auto;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #fff;
+    box-shadow: 0 0 18px rgba(139, 92, 246, 0.35);
+    letter-spacing: 0.02em;
 }
-.user-info {
-    display: flex;
-    flex-direction: column;
+.profile-name {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #F1F5F9;
+    margin-bottom: 0.15rem;
 }
-.user-name {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #f8fafc;
+.profile-email {
+    font-size: 0.72rem;
+    color: #64748B;
+    margin-bottom: 0.55rem;
 }
-.user-email {
-    font-size: 0.75rem;
-    color: #94a3b8;
+.tier-badge {
+    display: inline-block;
+    background: rgba(139, 92, 246, 0.15);
+    border: 1px solid rgba(139, 92, 246, 0.4);
+    color: #A78BFA;
+    font-size: 0.67rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.65rem;
+    border-radius: 20px;
 }
-.user-tier-badge {
+
+/* ── Sidebar nav label ────────────────────────────────────── */
+.nav-label {
     font-size: 0.65rem;
     font-weight: 700;
-    letter-spacing: 0.05em;
-    background: rgba(245, 158, 11, 0.12);
-    border: 1px solid rgba(245, 158, 11, 0.3);
-    color: #fbbf24;
-    padding: 0.2rem 0.5rem;
-    border-radius: 6px;
-    text-align: center;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
+    color: #4B5563;
+    margin: 1.1rem 0 0.4rem 0;
 }
 
-/* Sidebar Titles */
-.sidebar-title {
-    font-size: 0.75rem;
+/* ── Section heading cards ───────────────────────────────── */
+.section-card {
+    background: #1E1E24;
+    border: 1px solid #2A2A35;
+    border-radius: 14px;
+    padding: 1.5rem 1.75rem;
+    margin-bottom: 1.5rem;
+}
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #2A2A35;
+}
+.section-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+}
+.icon-violet { background: rgba(139, 92, 246, 0.15); }
+.icon-blue   { background: rgba(59, 130, 246, 0.15); }
+.icon-teal   { background: rgba(20, 184, 166, 0.15); }
+
+.section-title {
+    font-size: 0.95rem;
     font-weight: 700;
-    letter-spacing: 0.1em;
-    color: #6366f1;
-    margin: 1.25rem 0.5rem 0.5rem 0.5rem;
-    text-transform: uppercase;
+    color: #F1F5F9;
+    margin: 0;
+}
+.section-desc {
+    font-size: 0.78rem;
+    color: #64748B;
+    margin: 0;
 }
 
-/* Styled radio navigation buttons in sidebar */
-div[data-testid="stRadio"] label[data-baseweb="radio"] {
-    background: rgba(30, 41, 59, 0.25) !important;
-    border: 1px solid rgba(255, 255, 255, 0.03) !important;
-    border-radius: 8px !important;
-    padding: 0.65rem 0.85rem !important;
-    margin-bottom: 0.5rem !important;
-    cursor: pointer !important;
-    transition: all 0.2s ease-in-out !important;
-    width: 100% !important;
-    display: flex !important;
-    align-items: center !important;
-    color: #94a3b8 !important;
-}
-div[data-testid="stRadio"] label[data-baseweb="radio"]:hover {
-    background: rgba(99, 102, 241, 0.08) !important;
-    border-color: rgba(99, 102, 241, 0.2) !important;
-    color: #f1f5f9 !important;
-}
-div[data-testid="stRadio"] label[data-baseweb="radio"][data-checked="true"] {
-    background: linear-gradient(90deg, rgba(99, 102, 241, 0.15) 0%, rgba(168, 85, 247, 0.15) 100%) !important;
-    border-color: rgba(99, 102, 241, 0.5) !important;
-    color: #a5b4fc !important;
-    font-weight: 600 !important;
-    box-shadow: 0 4px 10px rgba(99, 102, 241, 0.1) !important;
-}
-/* Hide native radio button elements inside our styled labels */
-div[data-testid="stRadio"] label[data-baseweb="radio"] div[data-checked] {
-    display: none !important;
-}
-div[data-testid="stRadio"] label[data-baseweb="radio"] input {
-    display: none !important;
-}
-div[data-testid="stRadio"] label[data-baseweb="radio"] div {
-    padding: 0 !important;
-    margin: 0 !important;
-}
-
-/* Beautiful Title Card */
-.header-container {
-    background: linear-gradient(135deg, rgba(30, 41, 59, 0.3) 0%, rgba(15, 23, 42, 0.3) 100%);
-    border: 1px solid rgba(99, 102, 241, 0.15);
-    padding: 1.75rem 2rem;
-    border-radius: 16px;
-    margin-bottom: 2rem;
-    backdrop-filter: blur(12px);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-    text-align: center;
-}
-.main-title {
-    font-size: 2.4rem;
-    font-weight: 700;
-    background: linear-gradient(90deg, #818cf8, #c084fc, #f472b6);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    margin-bottom: 0.3rem;
-}
-.subtitle {
-    font-size: 1rem;
-    color: #94a3b8;
-    max-width: 800px;
-    margin: 0 auto;
-}
-
-/* Container cards for separate modules */
-.module-card {
-    background: rgba(30, 41, 59, 0.35) !important;
-    border: 1px solid rgba(99, 102, 241, 0.12) !important;
-    border-radius: 12px !important;
-    padding: 1.5rem !important;
-    margin-bottom: 1.5rem !important;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15) !important;
-}
-
-/* Suggested Icebreaker Cards */
+/* ── Starter output cards ────────────────────────────────── */
 .starter-card {
-    background: rgba(17, 24, 39, 0.45) !important;
-    border-left: 4px solid #6366f1 !important;
-    border-top: 1px solid rgba(255, 255, 255, 0.02) !important;
-    border-right: 1px solid rgba(255, 255, 255, 0.02) !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.02) !important;
-    border-radius: 0 12px 12px 0 !important;
-    padding: 1.25rem !important;
-    margin-bottom: 1rem !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    background: #16161E;
+    border-left: 3px solid #8B5CF6;
+    border-radius: 0 10px 10px 0;
+    padding: 1rem 1.1rem;
+    margin-bottom: 0.9rem;
+    transition: border-left-color 0.2s ease, background 0.2s ease;
 }
 .starter-card:hover {
-    border-left-color: #a855f7 !important;
-    background: rgba(17, 24, 39, 0.7) !important;
-    transform: translateX(4px) !important;
+    border-left-color: #6366F1;
+    background: #1A1A24;
+}
+.starter-num {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #8B5CF6;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.3rem;
 }
 .starter-text {
-    font-size: 1.02rem !important;
-    line-height: 1.5 !important;
-    color: #f1f5f9 !important;
-    font-weight: 450 !important;
+    font-size: 0.97rem;
+    color: #E2E8F0;
+    line-height: 1.55;
 }
 
-/* Theme Badges */
+/* ── Theme badges ────────────────────────────────────────── */
+.theme-row { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1rem; }
 .theme-badge {
-    background: rgba(99, 102, 241, 0.12) !important;
-    color: #a5b4fc !important;
-    border: 1px solid rgba(99, 102, 241, 0.25) !important;
-    border-radius: 20px !important;
-    padding: 0.25rem 0.75rem !important;
-    margin-right: 0.5rem !important;
-    margin-bottom: 0.5rem !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    gap: 0.35rem !important;
-    font-size: 0.78rem !important;
-    font-weight: 600 !important;
+    background: rgba(99, 102, 241, 0.1);
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    color: #A5B4FC;
+    border-radius: 20px;
+    padding: 0.22rem 0.7rem;
+    font-size: 0.74rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
 }
 .badge-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
+    width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0;
 }
-.dot-verified {
-    background-color: #10b981 !important;
-}
-.dot-unverified {
-    background-color: #f59e0b !important;
-}
+.dot-green  { background: #10B981; }
+.dot-yellow { background: #F59E0B; }
+.dot-grey   { background: #475569; }
 
-/* Fact Verification status styles */
-.fact-container {
-    background: rgba(15, 23, 42, 0.55) !important;
-    border-radius: 10px !important;
-    padding: 1rem !important;
-    margin-top: 0.75rem !important;
-    border: 1px solid rgba(255, 255, 255, 0.04) !important;
+/* ── Fact check result cards ─────────────────────────────── */
+.fact-card {
+    border-radius: 10px;
+    padding: 0.9rem 1.1rem;
+    margin-bottom: 0.7rem;
 }
-.fact-title-verified {
-    color: #34d399 !important;
-    font-weight: 600 !important;
-    font-size: 0.95rem !important;
-    display: flex !important;
-    align-items: center !important;
-    gap: 0.4rem !important;
-    margin-bottom: 0.3rem !important;
+.fact-verified {
+    background: rgba(16, 185, 129, 0.07);
+    border: 1px solid rgba(16, 185, 129, 0.25);
 }
-.fact-title-unverified {
-    color: #fbbf24 !important;
-    font-weight: 600 !important;
-    font-size: 0.95rem !important;
-    display: flex !important;
-    align-items: center !important;
-    gap: 0.4rem !important;
-    margin-bottom: 0.3rem !important;
+.fact-unverified {
+    background: rgba(245, 158, 11, 0.07);
+    border: 1px solid rgba(245, 158, 11, 0.25);
 }
+.fact-title-v { color: #34D399; font-weight: 600; font-size: 0.88rem; }
+.fact-title-u { color: #FBBF24; font-weight: 600; font-size: 0.88rem; }
 .fact-summary {
-    font-size: 0.88rem !important;
-    line-height: 1.4 !important;
-    color: #cbd5e1 !important;
-    margin-bottom: 0.4rem !important;
+    font-size: 0.82rem;
+    color: #94A3B8;
+    margin-top: 0.3rem;
+    line-height: 1.45;
 }
 .fact-link {
-    font-size: 0.78rem !important;
-    color: #60a5fa !important;
-    text-decoration: none !important;
+    font-size: 0.76rem;
+    color: #60A5FA;
+    text-decoration: none;
+    margin-top: 0.35rem;
+    display: inline-block;
 }
-.fact-link:hover {
-    text-decoration: underline !important;
+.fact-link:hover { text-decoration: underline; }
+
+/* ── Verification status banner ──────────────────────────── */
+.status-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.55rem 0.9rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 1.1rem;
+}
+.status-verified   { background: rgba(16,185,129,0.1);  border: 1px solid rgba(16,185,129,0.3);  color: #34D399; }
+.status-pending    { background: rgba(245,158,11,0.1);   border: 1px solid rgba(245,158,11,0.3);   color: #FBBF24; }
+.status-none       { background: rgba(71,85,105,0.15);   border: 1px solid rgba(71,85,105,0.3);   color: #94A3B8; }
+
+/* ── Feedback row buttons ────────────────────────────────── */
+.feedback-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.4rem;
 }
 
-/* Custom interactive buttons styling */
-button[kind="primary"] {
-    background: linear-gradient(90deg, #6366f1 0%, #a855f7 100%) !important;
-    border: none !important;
-    color: white !important;
+/* ── Page hero ───────────────────────────────────────────── */
+.hero {
+    background: linear-gradient(135deg, #1E1E2A 0%, #16161E 100%);
+    border: 1px solid #2A2A35;
+    border-radius: 16px;
+    padding: 2rem 2.25rem;
+    margin-bottom: 1.75rem;
+    text-align: center;
+}
+.hero-title {
+    font-size: 2rem;
+    font-weight: 800;
+    background: linear-gradient(90deg, #8B5CF6, #6366F1, #3B82F6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 0.4rem;
+    letter-spacing: -0.02em;
+}
+.hero-sub {
+    font-size: 0.88rem;
+    color: #64748B;
+    max-width: 680px;
+    margin: 0 auto;
+    line-height: 1.55;
+}
+
+/* ── Gate screen ─────────────────────────────────────────── */
+.gate-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 5rem 1rem;
+    text-align: center;
+}
+.gate-icon { font-size: 3rem; margin-bottom: 1rem; }
+.gate-title { font-size: 1.5rem; font-weight: 700; color: #8B5CF6; margin-bottom: 0.4rem; }
+.gate-sub { font-size: 0.88rem; color: #64748B; }
+
+/* ── Tab styling ─────────────────────────────────────────── */
+button[data-baseweb="tab"] {
+    font-size: 0.83rem !important;
     font-weight: 600 !important;
-    padding: 0.5rem 1rem !important;
-    transition: all 0.25s ease !important;
-}
-button[kind="primary"]:hover {
-    transform: translateY(-1px) !important;
-    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.35) !important;
 }
 
-button[kind="secondary"] {
-    background: rgba(30, 41, 59, 0.45) !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    color: #f1f5f9 !important;
-    font-weight: 500 !important;
-    padding: 0.5rem 1rem !important;
-    transition: all 0.25s ease !important;
+/* ── Streamlit overrides ─────────────────────────────────── */
+div[data-testid="stTextArea"] textarea {
+    background: #16161E !important;
+    border: 1px solid #2A2A35 !important;
+    border-radius: 8px !important;
+    color: #E2E8F0 !important;
+    font-size: 0.88rem !important;
 }
-button[kind="secondary"]:hover {
-    background: rgba(30, 41, 59, 0.8) !important;
-    border-color: rgba(99, 102, 241, 0.35) !important;
+div[data-testid="stTextArea"] textarea:focus {
+    border-color: #8B5CF6 !important;
+    box-shadow: 0 0 0 2px rgba(139,92,246,0.2) !important;
 }
+div[data-testid="stTextInput"] input {
+    background: #16161E !important;
+    border: 1px solid #2A2A35 !important;
+    border-radius: 8px !important;
+    color: #E2E8F0 !important;
+    font-size: 0.88rem !important;
+}
+div[data-testid="stTextInput"] input:focus {
+    border-color: #8B5CF6 !important;
+    box-shadow: 0 0 0 2px rgba(139,92,246,0.2) !important;
+}
+div[data-testid="stSelectbox"] > div {
+    background: #16161E !important;
+    border: 1px solid #2A2A35 !important;
+    border-radius: 8px !important;
+    color: #E2E8F0 !important;
+}
+
+/* Metric card tweaks */
+div[data-testid="metric-container"] {
+    background: #16161E !important;
+    border: 1px solid #2A2A35 !important;
+    border-radius: 10px !important;
+    padding: 1rem !important;
+}
+div[data-testid="metric-container"] label {
+    font-size: 0.73rem !important;
+    color: #64748B !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.06em !important;
+    text-transform: uppercase !important;
+}
+
+/* Dataframe */
+div[data-testid="stDataFrame"] { border-radius: 10px; overflow: hidden; }
+
+/* Divider */
+hr { border-color: #2A2A35 !important; margin: 1.25rem 0 !important; }
 </style>
 """, unsafe_allow_html=True)
 
 
-# Initialize session state variables
-if "current_generation" not in st.session_state:
-    st.session_state.current_generation = None
-if "fact_checks" not in st.session_state:
-    st.session_state.fact_checks = {}
-if "profile_bio" not in st.session_state:
-    st.session_state.profile_bio = ""
-if "event_description" not in st.session_state:
-    st.session_state.event_description = ""
-if "local_history" not in st.session_state:
-    st.session_state.local_history = []
+# ─────────────────────────────────────────────────────────────
+#  SESSION STATE INITIALISATION
+# ─────────────────────────────────────────────────────────────
+defaults = {
+    "logged_in": False,
+    "user_email": "",
+    "user_name": "Mallikarjun Salla",
+    "user_initials": "MS",
+    "current_generation": None,
+    "fact_checks": {},
+    "fact_status": "none",      # "none" | "pending" | "verified"
+    "profile_bio": "",
+    "event_description": "",
+    "local_history": [],
+    "workspace": "🤖 AI Generation Hub",
+}
+for k, v in defaults.items():
+    if k not in st.session_state:
+        st.session_state[k] = v
 
-# Fetch history quietly to populate the state
-def refresh_history_data():
+
+# ─────────────────────────────────────────────────────────────
+#  HELPER: silently refresh history from backend
+# ─────────────────────────────────────────────────────────────
+def refresh_history():
     if api_healthy:
         try:
-            res = requests.get(f"{BACKEND_URL}/api/history", timeout=3)
-            if res.status_code == 200:
-                st.session_state.local_history = res.json()
+            r = requests.get(f"{BACKEND_URL}/api/history", timeout=3)
+            if r.status_code == 200:
+                st.session_state.local_history = r.json()
         except Exception:
             pass
 
-refresh_history_data()
+refresh_history()
 
 
-# ----------------------------------------------------
-# SIDEBAR Restructuring
-# ----------------------------------------------------
-st.sidebar.markdown(f"""
-<div class="user-profile-card">
-    <div class="avatar-container">
-        <div class="user-avatar">US</div>
-        <div class="user-info">
-            <div class="user-name">Active User</div>
-            <div class="user-email">portfolio.user@saas.io</div>
+# ─────────────────────────────────────────────────────────────
+#  HELPER: parse combined context string back into bio / event
+# ─────────────────────────────────────────────────────────────
+def split_context(ctx: str):
+    bio, event = ctx, ""
+    if "Profile Bio:" in ctx and "Event Details:" in ctx:
+        try:
+            parts = ctx.split("Event Details:")
+            bio   = parts[0].replace("Profile Bio:", "").strip()
+            event = parts[1].strip()
+        except Exception:
+            pass
+    return bio, event
+
+
+# ═════════════════════════════════════════════════════════════
+#  SIDEBAR
+# ═════════════════════════════════════════════════════════════
+with st.sidebar:
+
+    # ── Brand mark ────────────────────────────────────────────
+    st.markdown("""
+    <div style="display:flex;align-items:center;gap:0.55rem;padding:0 0.25rem 1rem 0.25rem;">
+        <div style="width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#8B5CF6,#6366F1);
+                    display:flex;align-items:center;justify-content:center;font-size:1rem;">🤝</div>
+        <div>
+            <div style="font-size:0.88rem;font-weight:700;color:#F1F5F9;line-height:1.2;">Networking AI</div>
+            <div style="font-size:0.68rem;color:#475569;">Portfolio · SaaS Edition</div>
         </div>
     </div>
-    <div class="user-tier-badge">Premium Account</div>
+    <hr style="margin:0 0 1rem 0;">
+    """, unsafe_allow_html=True)
+
+    # ── LOGIN / PROFILE BLOCK ─────────────────────────────────
+    if not st.session_state.logged_in:
+        # ── Login portal ──────────────────────────────────────
+        st.markdown("""
+        <div class="login-card">
+            <div class="login-title">🔐 User Login Portal</div>
+            <div class="login-sub">Sign in to access your AI workspace</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        login_email    = st.text_input("Email address", placeholder="you@example.com",  key="l_email")
+        login_password = st.text_input("Password",      placeholder="••••••••••",       key="l_pass", type="password")
+        login_btn      = st.button("Sign In →", type="primary", use_container_width=True)
+
+        if login_btn:
+            if login_email.strip() and login_password.strip():
+                st.session_state.logged_in  = True
+                st.session_state.user_email = login_email.strip()
+                # Derive initials from email local-part
+                local = login_email.split("@")[0]
+                parts = local.replace(".", " ").replace("_", " ").split()
+                st.session_state.user_initials = "".join(p[0].upper() for p in parts[:2]) or "U"
+                st.toast("Signed in successfully!", icon="✅")
+                st.rerun()
+            else:
+                st.warning("Please enter both email and password.")
+
+        st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
+        st.caption("Demo: use any email + password to sign in.")
+
+    else:
+        # ── Profile card ───────────────────────────────────────
+        initials = st.session_state.user_initials
+        email    = st.session_state.user_email
+        name     = st.session_state.user_name
+
+        st.markdown(f"""
+        <div class="profile-card">
+            <div class="profile-avatar">{initials}</div>
+            <div class="profile-name">{name}</div>
+            <div class="profile-email">{email}</div>
+            <span class="tier-badge">Pro Developer</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # API status indicator (compact, no loud card)
+        status_icon  = "🟢" if api_healthy else "🔴"
+        status_label = "Backend Online" if api_healthy else "Backend Offline"
+        st.markdown(
+            f"<div style='font-size:0.72rem;color:#64748B;text-align:center;margin-bottom:0.75rem;'>"
+            f"{status_icon} {status_label}</div>",
+            unsafe_allow_html=True
+        )
+
+        # ── Workspace navigation ────────────────────────────────
+        st.markdown("<div class='nav-label'>Navigation</div>", unsafe_allow_html=True)
+        workspace = st.radio(
+            "nav",
+            options=[
+                "🤖 AI Generation Hub",
+                "👤 User Profiles & Bio Management",
+                "📊 Interaction Logs & Auditing",
+            ],
+            index=["🤖 AI Generation Hub",
+                   "👤 User Profiles & Bio Management",
+                   "📊 Interaction Logs & Auditing"].index(st.session_state.workspace),
+            label_visibility="collapsed",
+        )
+        st.session_state.workspace = workspace
+
+        st.markdown("<hr>", unsafe_allow_html=True)
+
+        # Logout
+        if st.button("↩ Logout", use_container_width=True):
+            for k in ["logged_in", "user_email", "user_initials", "current_generation",
+                      "fact_checks", "fact_status", "profile_bio", "event_description"]:
+                st.session_state[k] = defaults[k]
+            st.session_state.workspace = "🤖 AI Generation Hub"
+            st.toast("You have been signed out.", icon="👋")
+            st.rerun()
+
+
+# ═════════════════════════════════════════════════════════════
+#  MAIN PANEL  —  GATE if not logged in
+# ═════════════════════════════════════════════════════════════
+if not st.session_state.logged_in:
+    st.markdown("""
+    <div class="gate-container">
+        <div class="gate-icon">🔐</div>
+        <div class="gate-title">Authentication Required</div>
+        <div class="gate-sub">
+            Please sign in using the sidebar login portal to access<br>
+            your AI-powered Networking Assistant workspace.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    st.stop()
+
+
+# ═════════════════════════════════════════════════════════════
+#  AUTHENTICATED — PAGE HERO
+# ═════════════════════════════════════════════════════════════
+st.markdown("""
+<div class="hero">
+    <div class="hero-title">🤝 Personalized Networking Assistant</div>
+    <div class="hero-sub">
+        Enterprise-grade LLM orchestration platform — generate context-aware conversation
+        starters, verify professional claims via live Wikipedia context, and maintain a
+        complete interaction audit trail.
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
-st.sidebar.markdown("<div class='sidebar-title'>Workspace Control Panel</div>", unsafe_allow_html=True)
 
-# Radio workspace navigation selector
-workspace = st.sidebar.radio(
-    "Workspaces",
-    options=[
-        "🤖 AI Generation Hub",
-        "👤 User Profiles & Bio Management",
-        "📊 Interaction Logs & Auditing"
-    ],
-    key="workspace_nav",
-    label_visibility="collapsed"
-)
+# ═════════════════════════════════════════════════════════════
+#  WORKSPACE ROUTING
+# ═════════════════════════════════════════════════════════════
+ws = st.session_state.workspace
 
 
-# Helper function to parse user context into bio & event details if matching layout prefix
-def parse_context_details(ctx_str):
-    bio_part = ctx_str
-    event_part = ""
-    if "Profile Bio:" in ctx_str and "Event Details:" in ctx_str:
-        try:
-            parts = ctx_str.split("Event Details:")
-            bio_part = parts[0].replace("Profile Bio:", "").strip()
-            event_part = parts[1].strip()
-        except Exception:
-            pass
-    return bio_part, event_part
+# ─────────────────────────────────────────────────────────────
+#  WORKSPACE 1 ·  AI GENERATION HUB
+# ─────────────────────────────────────────────────────────────
+if ws == "🤖 AI Generation Hub":
 
-
-# ----------------------------------------------------
-# WORKSPACE: AI Generation Hub
-# ----------------------------------------------------
-if workspace == "🤖 AI Generation Hub":
-    # App Title & Header
+    # ══════════════════════════════════════════════════════════
+    #  CONDITION 1 — USER INPUT AREA MODULE
+    # ══════════════════════════════════════════════════════════
     st.markdown("""
-    <div class="header-container">
-        <div class="main-title">🤝 Personalized Networking Assistant</div>
-        <div class="subtitle">An enterprise-grade LLM intelligence portal designed to orchestrate context-aware conversation starters, verify technology references using Wikipedia context, and record real-time feedback auditing.</div>
+    <div class="section-card">
+        <div class="section-header">
+            <div class="section-icon icon-violet">📥</div>
+            <div>
+                <div class="section-title">User Input Area Module</div>
+                <div class="section-desc">Provide target professional context and networking event details</div>
+            </div>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # 1. User Input Area Module
-    st.markdown("<div class='module-card'>", unsafe_allow_html=True)
-    st.subheader("📥 User Input Area Module")
-    st.markdown("<p style='color: #94a3b8; font-size: 0.92rem; margin-top: -0.5rem;'>Enter context details to configure the generation. These details are stored persistently in the database.</p>", unsafe_allow_html=True)
-    
-    col_bio, col_event = st.columns(2)
-    with col_bio:
-        profile_bio_input = st.text_area(
-            "Profile Bio Input (User context)",
-            value=st.session_state.profile_bio,
-            placeholder="E.g. Meet Alice, a Senior DevOps Engineer at Google. She likes Rust, Kubernetes, and hiking in the Pacific Northwest. She recently wrote a blog post on optimizing CI/CD workflows.",
-            height=130,
-            key="profile_bio_widget"
-        )
-    with col_event:
-        event_description_input = st.text_area(
-            "Event Description Input (Networking context)",
-            value=st.session_state.event_description,
-            placeholder="E.g. Chatting at KubeCon networking lounge, aiming to get advice on DevOps best practices, CI/CD pipelines, or seeking a mentor.",
-            height=130,
-            key="event_description_widget"
-        )
-        
-    col_rel, col_tone = st.columns(2)
-    with col_rel:
-        relationship = st.selectbox(
-            "Target Relationship",
-            options=["Colleague", "Mentor", "Client", "Recruiter"],
-            index=0
-        )
-    with col_tone:
-        tone = st.selectbox(
-            "Message Tone",
-            options=["Professional", "Casual", "Warm"],
-            index=0
-        )
-    st.markdown("</div>", unsafe_allow_html=True)
+    with st.container():
+        col_bio, col_event = st.columns(2)
 
-    # Sync input state
-    st.session_state.profile_bio = profile_bio_input
-    st.session_state.event_description = event_description_input
+        with col_bio:
+            st.markdown("**Profile Bio Input** — *Target Professional Context*")
+            profile_bio = st.text_area(
+                "profile_bio",
+                value=st.session_state.profile_bio,
+                placeholder=(
+                    "E.g. Meet Alice, a Senior DevOps Engineer at Google. She loves Rust, "
+                    "Kubernetes, and hiking in the Pacific Northwest. She recently published "
+                    "a blog post on optimising CI/CD workflows using GitHub Actions."
+                ),
+                height=155,
+                label_visibility="collapsed",
+                key="bio_input",
+            )
 
-    # 2. Generation Engine Control Module
-    st.markdown("<div class='module-card' style='padding: 1rem 1.5rem !important;'>", unsafe_allow_html=True)
-    col_btn_gen, col_btn_fact, col_btn_spacer = st.columns([1, 1, 2])
-    
-    with col_btn_gen:
-        generate_button = st.button("Generate Starters", type="primary", use_container_width=True)
-    with col_btn_fact:
-        fact_check_button = st.button("Request Fact Check", type="secondary", use_container_width=True)
-    st.markdown("</div>", unsafe_allow_html=True)
+        with col_event:
+            st.markdown("**Event Description Input** — *Networking Event Context*")
+            event_desc = st.text_area(
+                "event_desc",
+                value=st.session_state.event_description,
+                placeholder=(
+                    "E.g. Attending KubeCon North America — networking lounge session. "
+                    "Goal: connect with senior engineers, learn about open-source DevOps tooling "
+                    "and explore potential mentorship opportunities."
+                ),
+                height=155,
+                label_visibility="collapsed",
+                key="event_input",
+            )
 
-    # Action Trigger logic
-    if generate_button:
+        col_rel, col_tone, _ = st.columns([1, 1, 2])
+        with col_rel:
+            relationship = st.selectbox("Target Relationship", ["Colleague", "Mentor", "Client", "Recruiter"])
+        with col_tone:
+            tone = st.selectbox("Conversation Tone", ["Professional", "Casual", "Warm"])
+
+    # Sync to state
+    st.session_state.profile_bio      = profile_bio
+    st.session_state.event_description = event_desc
+
+    st.markdown("<div style='height:0.1rem'></div>", unsafe_allow_html=True)
+
+    # ══════════════════════════════════════════════════════════
+    #  CONDITION 2 — GENERATION ENGINE CONTROL & OUTPUT VIEW
+    # ══════════════════════════════════════════════════════════
+    st.markdown("""
+    <div class="section-card">
+        <div class="section-header">
+            <div class="section-icon icon-blue">⚡</div>
+            <div>
+                <div class="section-title">Generation Engine Control & Output View</div>
+                <div class="section-desc">Orchestrate AI generation and Wikipedia fact-verification pipeline</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── Action triggers ────────────────────────────────────────
+    btn_col1, btn_col2, _ = st.columns([1.3, 1.3, 3])
+
+    with btn_col1:
+        gen_btn = st.button("✨  Generate Starters", type="primary", use_container_width=True)
+    with btn_col2:
+        fact_btn = st.button("🔍  Request Fact Check", type="secondary", use_container_width=True)
+
+    # ── Generate handler ───────────────────────────────────────
+    if gen_btn:
         if not api_healthy:
-            st.error("Backend API Connection Offline: Please launch the FastAPI backend server on port 8000.", icon="🔌")
-        elif not profile_bio_input.strip() or not event_description_input.strip():
-            st.warning("Please fill out both the Profile Bio Input and the Event Description Input to orchestrate the generator.")
+            st.error("Backend API is offline. Please start the FastAPI server on port 8000.", icon="🔌")
+        elif not profile_bio.strip() or not event_desc.strip():
+            st.warning("Both **Profile Bio** and **Event Description** fields are required.")
         else:
-            # Combine inputs cleanly as per architectural specifications
-            combined_context = f"Profile Bio:\n{profile_bio_input.strip()}\n\nEvent Details:\n{event_description_input.strip()}"
-            st.session_state.fact_checks = {}  # Clear previous check results
-            
-            with st.spinner("Invoking generation engine (DistilBERT theme parsing + GPT-2 starter generation)..."):
-                try:
-                    response = requests.post(
-                        f"{BACKEND_URL}/api/generate",
-                        json={
-                            "context": combined_context,
-                            "relationship": relationship.lower(),
-                            "tone": tone.lower()
-                        },
-                        timeout=30
-                    )
-                    if response.status_code == 200:
-                        st.session_state.current_generation = response.json()
-                        st.toast("Icebreakers generated successfully!", icon="✅")
-                        refresh_history_data()
-                    else:
-                        st.error(f"Generation Engine Error: {response.json().get('detail', 'Unknown error')}")
-                except Exception as e:
-                    st.error(f"Failed to communicate with Generation Engine: {e}")
+            combined = f"Profile Bio:\n{profile_bio.strip()}\n\nEvent Details:\n{event_desc.strip()}"
+            st.session_state.fact_checks  = {}
+            st.session_state.fact_status  = "none"
 
-    if fact_check_button:
+            with st.spinner("Invoking DistilBERT NER → GPT-2 generation pipeline…"):
+                try:
+                    resp = requests.post(
+                        f"{BACKEND_URL}/api/generate",
+                        json={"context": combined, "relationship": relationship.lower(), "tone": tone.lower()},
+                        timeout=30,
+                    )
+                    if resp.status_code == 200:
+                        st.session_state.current_generation = resp.json()
+                        st.session_state.fact_status = "pending"
+                        st.toast("Conversation starters generated!", icon="✅")
+                        refresh_history()
+                    else:
+                        st.error(f"Engine error {resp.status_code}: {resp.json().get('detail', 'Unknown')}")
+                except Exception as e:
+                    st.error(f"Cannot reach Generation Engine: {e}")
+
+    # ── Fact-check handler ─────────────────────────────────────
+    if fact_btn:
         if not st.session_state.current_generation:
-            st.warning("No active generation found. Please generate conversation starters first before running fact check.")
+            st.warning("Run **Generate Starters** first to extract themes for fact-checking.")
         elif not api_healthy:
-            st.error("Backend API Connection Offline. Fact-checker service unavailable.", icon="🔌")
+            st.error("Backend API is offline — fact-check unavailable.", icon="🔌")
         else:
             themes = st.session_state.current_generation.get("themes", [])
             if not themes:
-                st.info("No explicit themes extracted from your profile input to fact-check.")
+                st.info("No named entities were extracted from the current profile — nothing to verify.")
             else:
                 st.session_state.fact_checks = {}
-                with st.spinner("Requesting live Wikipedia context verification..."):
+                all_verified = True
+                with st.spinner("Querying live Wikipedia API for each extracted entity…"):
                     for theme in themes:
                         try:
-                            check_res = requests.get(
-                                f"{BACKEND_URL}/api/factcheck",
-                                params={"query": theme},
-                                timeout=10
-                            )
-                            if check_res.status_code == 200:
-                                st.session_state.fact_checks[theme] = check_res.json()
+                            cr = requests.get(f"{BACKEND_URL}/api/factcheck", params={"query": theme}, timeout=10)
+                            if cr.status_code == 200:
+                                result = cr.json()
+                                st.session_state.fact_checks[theme] = result
+                                if not result.get("verified"):
+                                    all_verified = False
                             else:
-                                st.session_state.fact_checks[theme] = {"verified": False, "message": "Wikipedia verification returned error code."}
+                                st.session_state.fact_checks[theme] = {"verified": False, "message": "API error."}
+                                all_verified = False
                         except Exception as e:
-                            st.session_state.fact_checks[theme] = {"verified": False, "message": f"Connection lost: {e}"}
-                st.toast("Wikipedia context lookup completed!", icon="🔍")
+                            st.session_state.fact_checks[theme] = {"verified": False, "message": str(e)}
+                            all_verified = False
+                st.session_state.fact_status = "verified" if all_verified else "pending"
+                st.toast("Wikipedia verification complete!", icon="🔍")
 
-    # 3. Output Display & Chat Module
+    st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
+
+    # ── Fact Verification Status banner ───────────────────────
+    fact_status = st.session_state.fact_status
+    if fact_status == "verified":
+        st.markdown("""<div class="status-banner status-verified">
+            ✅&nbsp; Fact Verification Status: <strong>Verified</strong>
+            &nbsp;·&nbsp; All extracted entities confirmed via Wikipedia
+        </div>""", unsafe_allow_html=True)
+    elif fact_status == "pending":
+        st.markdown("""<div class="status-banner status-pending">
+            ⚠️&nbsp; Fact Verification Status: <strong>Pending / Partial</strong>
+            &nbsp;·&nbsp; Click "Request Fact Check" to verify all themes
+        </div>""", unsafe_allow_html=True)
+    else:
+        st.markdown("""<div class="status-banner status-none">
+            ○&nbsp; Fact Verification Status: <strong>Not Run</strong>
+            &nbsp;·&nbsp; Generate starters then request a fact check
+        </div>""", unsafe_allow_html=True)
+
+    # ── Output block ───────────────────────────────────────────
     if st.session_state.current_generation:
-        gen_data = st.session_state.current_generation
-        st.markdown("<div class='module-card'>", unsafe_allow_html=True)
-        st.subheader("⚡ Output Display & Chat Module")
-        
-        # Display themes as beautiful badges (dynamic colors based on fact check status)
-        st.markdown("#### **Extracted Themes & Entities**")
-        themes = gen_data.get("themes", [])
-        if themes:
-            badge_html = ""
-            for theme in themes:
-                # Check status
-                if theme in st.session_state.fact_checks:
-                    is_verified = st.session_state.fact_checks[theme].get("verified", False)
-                    if is_verified:
-                        badge_html += f'<span class="theme-badge theme-badge-verified"><span class="badge-dot dot-verified"></span>✓ Verified: {theme}</span>'
-                    else:
-                        badge_html += f'<span class="theme-badge theme-badge-unverified"><span class="badge-dot dot-unverified"></span>⚠ Unverified: {theme}</span>'
-                else:
-                    badge_html += f'<span class="theme-badge">{theme}</span>'
-            st.markdown(badge_html, unsafe_allow_html=True)
-        else:
-            st.info("No explicit professional themes were extracted from the inputs.")
+        gen = st.session_state.current_generation
 
-        st.markdown("<div style='margin-top: 1.25rem;'></div>", unsafe_allow_html=True)
-        st.markdown("#### **Suggested Conversation Starters**")
-        
-        # Render the starters with inline feedback controls
-        for idx, starter in enumerate(gen_data.get("starters", [])):
+        # Themes row
+        themes = gen.get("themes", [])
+        if themes:
+            badge_html = '<div class="theme-row">'
+            for t in themes:
+                fc = st.session_state.fact_checks.get(t)
+                if fc is None:
+                    dot, label = "dot-grey",   t
+                elif fc.get("verified"):
+                    dot, label = "dot-green",  f"✓ {t}"
+                else:
+                    dot, label = "dot-yellow", f"⚠ {t}"
+                badge_html += (
+                    f'<span class="theme-badge">'
+                    f'<span class="badge-dot {dot}"></span>{label}</span>'
+                )
+            badge_html += "</div>"
+            st.markdown(badge_html, unsafe_allow_html=True)
+
+        st.markdown("**Suggested Conversation Starters**")
+
+        for idx, starter in enumerate(gen.get("starters", [])):
             st.markdown(f"""
             <div class="starter-card">
+                <div class="starter-num">Starter {idx + 1}</div>
                 <div class="starter-text">"{starter}"</div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            col_fb_like, col_fb_dislike, col_fb_comment = st.columns([1, 1.2, 5])
-            
-            with col_fb_like:
-                if st.button("👍 Useful", key=f"like_{gen_data['id']}_{idx}"):
-                    if api_healthy:
-                        try:
-                            res = requests.post(
-                                f"{BACKEND_URL}/api/feedback",
-                                json={
-                                    "id": gen_data["id"],
-                                    "starter_index": idx,
-                                    "rating": "thumbs_up",
-                                    "comment": ""
-                                }
-                            )
-                            if res.status_code == 200:
-                                st.toast("Saved thumbs-up feedback!", icon="👍")
-                                refresh_history_data()
-                        except Exception as e:
-                            st.error(f"Error submitting rating: {e}")
-                    else:
-                        st.error("API disconnected.")
-            
-            with col_fb_dislike:
-                if st.button("👎 Not Useful", key=f"dislike_{gen_data['id']}_{idx}"):
-                    if api_healthy:
-                        try:
-                            res = requests.post(
-                                f"{BACKEND_URL}/api/feedback",
-                                json={
-                                    "id": gen_data["id"],
-                                    "starter_index": idx,
-                                    "rating": "thumbs_down",
-                                    "comment": ""
-                                }
-                            )
-                            if res.status_code == 200:
-                                st.toast("Saved thumbs-down feedback!", icon="👎")
-                                refresh_history_data()
-                        except Exception as e:
-                            st.error(f"Error submitting rating: {e}")
-                    else:
-                        st.error("API disconnected.")
-                        
-            with col_fb_comment:
-                with st.expander("📝 Custom Feedback Comment"):
-                    c_text = st.text_input("Enter comment details", key=f"cmt_in_{gen_data['id']}_{idx}", label_visibility="collapsed")
-                    if st.button("Submit comment", key=f"cmt_sub_{gen_data['id']}_{idx}"):
-                        if api_healthy and c_text.strip():
-                            try:
-                                res = requests.post(
-                                    f"{BACKEND_URL}/api/feedback",
-                                    json={
-                                        "id": gen_data["id"],
-                                        "starter_index": idx,
-                                        "rating": "thumbs_up",
-                                        "comment": c_text
-                                    }
-                                )
-                                if res.status_code == 200:
-                                    st.toast("Comment submitted successfully!", icon="📝")
-                                    refresh_history_data()
-                            except Exception as e:
-                                st.error(f"Error submitting comment: {e}")
-                        elif not c_text.strip():
-                            st.warning("Please type a comment before submitting.")
-                        else:
-                            st.error("API disconnected.")
-            st.markdown("<hr style='border: 0; border-top: 1px solid rgba(255, 255, 255, 0.05); margin: 0.5rem 0;'>", unsafe_allow_html=True)
+            </div>""", unsafe_allow_html=True)
 
-        # Render Wikipedia Source Snippet Context if user ran fact-check
+            fb_like, fb_dis, fb_cmt = st.columns([0.9, 1.1, 5])
+            with fb_like:
+                if st.button("👍", key=f"like_{gen['id']}_{idx}", help="Mark as useful"):
+                    if api_healthy:
+                        try:
+                            requests.post(f"{BACKEND_URL}/api/feedback",
+                                json={"id": gen["id"], "starter_index": idx,
+                                      "rating": "thumbs_up", "comment": ""})
+                            st.toast("Feedback saved!", icon="👍")
+                            refresh_history()
+                        except Exception:
+                            pass
+            with fb_dis:
+                if st.button("👎", key=f"dis_{gen['id']}_{idx}", help="Mark as not useful"):
+                    if api_healthy:
+                        try:
+                            requests.post(f"{BACKEND_URL}/api/feedback",
+                                json={"id": gen["id"], "starter_index": idx,
+                                      "rating": "thumbs_down", "comment": ""})
+                            st.toast("Feedback saved!", icon="👎")
+                            refresh_history()
+                        except Exception:
+                            pass
+            with fb_cmt:
+                with st.expander("Add a note"):
+                    note = st.text_input("Note", key=f"note_{gen['id']}_{idx}",
+                                         label_visibility="collapsed",
+                                         placeholder="Optional feedback comment…")
+                    if st.button("Submit", key=f"note_sub_{gen['id']}_{idx}"):
+                        if note.strip() and api_healthy:
+                            try:
+                                requests.post(f"{BACKEND_URL}/api/feedback",
+                                    json={"id": gen["id"], "starter_index": idx,
+                                          "rating": "thumbs_up", "comment": note})
+                                st.toast("Note saved!", icon="📝")
+                                refresh_history()
+                            except Exception:
+                                pass
+
+        # ── Wikipedia context snippets ─────────────────────────
         if st.session_state.fact_checks:
-            st.markdown("<div style='margin-top: 1.5rem;'></div>", unsafe_allow_html=True)
-            st.markdown("#### 🔍 Wikipedia Fact-Checking Context Details")
-            for theme, fact_data in st.session_state.fact_checks.items():
-                if fact_data.get("verified"):
+            st.markdown("<hr>", unsafe_allow_html=True)
+            st.markdown("**🔍 Live Wikipedia Context Results**")
+            for theme, fc in st.session_state.fact_checks.items():
+                if fc.get("verified"):
                     st.markdown(f"""
-                    <div class="fact-container">
-                        <div class="fact-title-verified">✓ {theme} (Wikipedia Page Verified)</div>
-                        <div class="fact-summary">{fact_data.get('summary')}</div>
-                        <a href="{fact_data.get('source_url')}" target="_blank" class="fact-link">View Wikipedia reference ↗</a>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    <div class="fact-card fact-verified">
+                        <div class="fact-title-v">✓ {theme}</div>
+                        <div class="fact-summary">{fc.get('summary','')}</div>
+                        <a href="{fc.get('source_url','#')}" target="_blank" class="fact-link">
+                            View on Wikipedia ↗
+                        </a>
+                    </div>""", unsafe_allow_html=True)
                 else:
                     st.markdown(f"""
-                    <div class="fact-container" style="border-left: 3px solid #f59e0b !important;">
-                        <div class="fact-title-unverified">⚠ {theme} (No Wikipedia Match Found)</div>
-                        <div class="fact-summary">{fact_data.get('message', 'No source details available. Check spelling.')}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+                    <div class="fact-card fact-unverified">
+                        <div class="fact-title-u">⚠ {theme} — No Wikipedia Match</div>
+                        <div class="fact-summary">{fc.get('message','No details available.')}</div>
+                    </div>""", unsafe_allow_html=True)
 
-    # 4. Integrated Data & Storage Layer View
-    st.markdown("<div class='module-card'>", unsafe_allow_html=True)
-    st.subheader("📁 Local Data Store")
-    st.markdown("<p style='color: #94a3b8; font-size: 0.92rem; margin-top: -0.5rem;'>Interactive overview of persistent profiles and generation records.</p>", unsafe_allow_html=True)
+    st.markdown("<div style='height:0.1rem'></div>", unsafe_allow_html=True)
 
-    store_tab_profiles, store_tab_audit = st.tabs(["👤 Saved User Profiles", "📊 System Interaction Audit Logs"])
-    
-    with store_tab_profiles:
-        if not st.session_state.local_history:
-            st.info("No generated user profiles recorded. Try generating starters above!")
-        else:
-            profile_records = []
-            for entry in st.session_state.local_history:
-                bio, event = parse_context_details(entry.get("context", ""))
-                profile_records.append({
-                    "Timestamp": entry.get("timestamp", "")[:19].replace("T", " "),
-                    "User Bio Profile": bio[:100] + "..." if len(bio) > 100 else bio,
-                    "Event Context": event[:80] + "..." if len(event) > 80 else event,
-                    "Themes Extracted": ", ".join(entry.get("themes", [])) or "None",
-                    "Relationship": entry.get("relationship", "").capitalize()
-                })
-            df_profiles = pd.DataFrame(profile_records)
-            st.dataframe(df_profiles, use_container_width=True)
-
-    with store_tab_audit:
-        if not st.session_state.local_history:
-            st.info("No system interaction logs available yet.")
-        else:
-            audit_records = []
-            for entry in st.session_state.local_history:
-                # Count feedbacks
-                likes = sum(1 for fb in entry.get("feedbacks", []) if fb.get("rating") == "thumbs_up")
-                dislikes = sum(1 for fb in entry.get("feedbacks", []) if fb.get("rating") == "thumbs_down")
-                audit_records.append({
-                    "Transaction ID": entry.get("id", ""),
-                    "Timestamp": entry.get("timestamp", "")[:19].replace("T", " "),
-                    "Tone Parameter": entry.get("tone", "").capitalize(),
-                    "Starters Count": len(entry.get("starters", [])),
-                    "👍 Likes": likes,
-                    "👎 Dislikes": dislikes,
-                    "Total Feedbacks": len(entry.get("feedbacks", []))
-                })
-            df_audit = pd.DataFrame(audit_records)
-            st.dataframe(df_audit, use_container_width=True)
-            
-            # Simple refresh controls
-            if st.button("Refresh Persistent Storage View"):
-                refresh_history_data()
-                st.toast("Storage tables updated!", icon="🔄")
-    st.markdown("</div>", unsafe_allow_html=True)
-
-
-# ----------------------------------------------------
-# WORKSPACE: User Profiles & Bio Management
-# ----------------------------------------------------
-elif workspace == "👤 User Profiles & Bio Management":
+    # ══════════════════════════════════════════════════════════
+    #  CONDITION 3 — DATA & STORAGE LAYER
+    # ══════════════════════════════════════════════════════════
     st.markdown("""
-    <div class="header-container">
-        <div class="main-title">👤 User Profiles & Bio Management</div>
-        <div class="subtitle">CRM Workspace to audit, search, and manage context profiles recorded across past networking sessions.</div>
+    <div class="section-card">
+        <div class="section-header">
+            <div class="section-icon icon-teal">💾</div>
+            <div>
+                <div class="section-title">System Data & Storage Layer</div>
+                <div class="section-desc">Persistent profile database and interaction audit trail</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    tab_profiles, tab_audit = st.tabs(["📋  Logged User Profiles", "📊  Interaction Audit Logs"])
+
+    # ── TAB 1 : Logged User Profiles ──────────────────────────
+    with tab_profiles:
+        if not st.session_state.local_history:
+            st.info("No profile records yet. Generate starters above to populate this table.")
+        else:
+            rows = []
+            for entry in st.session_state.local_history:
+                bio, event = split_context(entry.get("context", ""))
+                rows.append({
+                    "Timestamp":        entry.get("timestamp", "")[:19].replace("T", " "),
+                    "User Bio":         (bio[:90] + "…") if len(bio) > 90 else bio,
+                    "Event Context":    (event[:70] + "…") if len(event) > 70 else event,
+                    "Themes":           ", ".join(entry.get("themes", [])) or "—",
+                    "Relationship":     entry.get("relationship", "").capitalize(),
+                    "Tone":             entry.get("tone", "").capitalize(),
+                })
+            st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+
+    # ── TAB 2 : Interaction Audit Logs ────────────────────────
+    with tab_audit:
+        if not st.session_state.local_history:
+            st.info("No audit data yet. Complete a generation session to see logs here.")
+        else:
+            # ── Aggregate metrics row
+            total_gen  = len(st.session_state.local_history)
+            total_fb   = sum(len(e.get("feedbacks", [])) for e in st.session_state.local_history)
+            total_like = sum(
+                sum(1 for f in e.get("feedbacks", []) if f.get("rating") == "thumbs_up")
+                for e in st.session_state.local_history)
+            total_dis  = sum(
+                sum(1 for f in e.get("feedbacks", []) if f.get("rating") == "thumbs_down")
+                for e in st.session_state.local_history)
+
+            m1, m2, m3, m4 = st.columns(4)
+            m1.metric("API Requests",      total_gen)
+            m2.metric("Total Feedbacks",   total_fb)
+            m3.metric("👍 Likes",           total_like)
+            m4.metric("👎 Dislikes",        total_dis)
+
+            st.markdown("<div style='height:0.75rem'></div>", unsafe_allow_html=True)
+
+            # ── Full audit table
+            audit_rows = []
+            for entry in st.session_state.local_history:
+                for s_idx, starter in enumerate(entry.get("starters", [])):
+                    fbs = [f for f in entry.get("feedbacks", []) if f.get("starter_index") == s_idx]
+                    rating_str  = ", ".join("👍" if f["rating"] == "thumbs_up" else "👎" for f in fbs) or "—"
+                    comment_str = " | ".join(f["comment"] for f in fbs if f.get("comment")) or "—"
+                    audit_rows.append({
+                        "Timestamp":        entry.get("timestamp", "")[:19].replace("T", " "),
+                        "Relationship":     entry.get("relationship", "").capitalize(),
+                        "Tone":             entry.get("tone", "").capitalize(),
+                        "Starter (preview)":(starter[:75] + "…") if len(starter) > 75 else starter,
+                        "Rating":           rating_str,
+                        "Auditor Notes":    comment_str,
+                        "Transaction ID":   entry.get("id", ""),
+                    })
+
+            df_audit = pd.DataFrame(audit_rows)
+            st.dataframe(df_audit, use_container_width=True, hide_index=True)
+
+            st.markdown("<div style='height:0.6rem'></div>", unsafe_allow_html=True)
+            dl_col, _ = st.columns([1.4, 4])
+            with dl_col:
+                csv_bytes = df_audit.to_csv(index=False).encode("utf-8")
+                st.download_button(
+                    label="⬇  Download CSV Log",
+                    data=csv_bytes,
+                    file_name=f"audit_log_{datetime.datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+                    mime="text/csv",
+                    use_container_width=True,
+                )
+
+            col_refresh, _ = st.columns([1.4, 4])
+            with col_refresh:
+                if st.button("↺  Refresh Logs", use_container_width=True):
+                    refresh_history()
+                    st.toast("Audit logs refreshed!", icon="🔄")
+
+
+# ─────────────────────────────────────────────────────────────
+#  WORKSPACE 2 · USER PROFILES & BIO MANAGEMENT
+# ─────────────────────────────────────────────────────────────
+elif ws == "👤 User Profiles & Bio Management":
+
+    st.markdown("""
+    <div class="section-card">
+        <div class="section-header">
+            <div class="section-icon icon-violet">👤</div>
+            <div>
+                <div class="section-title">User Profiles & Bio Management</div>
+                <div class="section-desc">Browse, search, and restore previously saved professional profiles</div>
+            </div>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
     if not st.session_state.local_history:
-        st.info("No profile records detected in backend storage database. Try generating icebreakers in the AI Hub first!")
+        st.info("No profiles stored yet. Head to **AI Generation Hub** and run your first generation.")
     else:
-        st.markdown("<div class='module-card'>", unsafe_allow_html=True)
-        st.subheader("🔍 Search Profiles & Restore")
-        
-        search_query = st.text_input("Filter profiles by keyword (bio or themes):", placeholder="E.g. Google, Rust, Alice...")
-        
-        # Display list of cards representing each profile
+        search = st.text_input("🔍  Filter profiles by keyword", placeholder="E.g. Google, Kubernetes, Alice…")
+        st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
+
         for idx, entry in enumerate(st.session_state.local_history):
-            bio, event = parse_context_details(entry["context"])
-            themes_str = ", ".join(entry["themes"])
-            
-            # Match search criteria
-            if search_query.strip() and (
-                search_query.lower() not in bio.lower() and
-                search_query.lower() not in event.lower() and
-                search_query.lower() not in themes_str.lower()
+            bio, event  = split_context(entry["context"])
+            themes_str  = ", ".join(entry.get("themes", [])) or "None"
+            created     = entry.get("timestamp", "")[:19].replace("T", " ")
+
+            if search.strip() and all(
+                search.lower() not in t.lower()
+                for t in [bio, event, themes_str]
             ):
                 continue
-                
-            st.markdown(f"""
-            <div style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
-                    <strong style="color:#a5b4fc; font-size:1.05rem;">Profile #{idx + 1} - Relationship: {entry['relationship'].capitalize()}</strong>
-                    <span style="font-size:0.75rem; color:#94a3b8;">Created: {entry['timestamp'][:19].replace('T', ' ')}</span>
+
+            with st.container():
+                st.markdown(f"""
+                <div style="background:#1E1E24;border:1px solid #2A2A35;border-radius:12px;
+                            padding:1.1rem 1.3rem;margin-bottom:0.85rem;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem;">
+                        <strong style="color:#A78BFA;font-size:0.92rem;">
+                            Profile #{idx + 1} &nbsp;·&nbsp; {entry['relationship'].capitalize()}
+                        </strong>
+                        <span style="font-size:0.71rem;color:#475569;">{created}</span>
+                    </div>
+                    <div style="font-size:0.85rem;margin-bottom:0.35rem;">
+                        <span style="color:#64748B;font-weight:600;">Bio:</span>&nbsp; {bio[:200]}
+                    </div>
+                    <div style="font-size:0.85rem;margin-bottom:0.35rem;">
+                        <span style="color:#64748B;font-weight:600;">Event:</span>&nbsp; {event[:160] if event else '—'}
+                    </div>
+                    <div style="font-size:0.78rem;color:#475569;">
+                        <span style="font-weight:600;">Themes:</span>&nbsp; {themes_str}
+                    </div>
                 </div>
-                <div style="font-size:0.9rem; margin-bottom:0.5rem;"><strong>Bio context:</strong> {bio}</div>
-                <div style="font-size:0.9rem; margin-bottom:0.5rem;"><strong>Event details:</strong> {event}</div>
-                <div style="font-size:0.85rem; color:#94a3b8;"><strong>Themes:</strong> {themes_str or "None"}</div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Add action button to restore/load this profile to active workspace
-            col_load, _ = st.columns([1.5, 5])
-            with col_load:
-                if st.button("Load into Generation Hub", key=f"load_prof_{entry['id']}_{idx}", use_container_width=True):
-                    # Set the values in session state
-                    st.session_state.profile_bio = bio
-                    st.session_state.event_description = event
-                    # Switch workspaces
-                    st.session_state.workspace_nav = "🤖 AI Generation Hub"
-                    st.toast("Profile loaded successfully! Switched to AI Generation Hub.", icon="👤")
-                    st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
+
+                load_col, _ = st.columns([1.5, 5])
+                with load_col:
+                    if st.button("Load into Hub", key=f"load_{entry['id']}", use_container_width=True):
+                        st.session_state.profile_bio       = bio
+                        st.session_state.event_description = event
+                        st.session_state.workspace         = "🤖 AI Generation Hub"
+                        st.toast("Profile restored — switched to AI Generation Hub.", icon="👤")
+                        st.rerun()
 
 
-# ----------------------------------------------------
-# WORKSPACE: Interaction Logs & Auditing
-# ----------------------------------------------------
-elif workspace == "📊 Interaction Logs & Auditing":
+# ─────────────────────────────────────────────────────────────
+#  WORKSPACE 3 · INTERACTION LOGS & AUDITING
+# ─────────────────────────────────────────────────────────────
+elif ws == "📊 Interaction Logs & Auditing":
+
     st.markdown("""
-    <div class="header-container">
-        <div class="main-title">📊 Interaction Logs & Auditing</div>
-        <div class="subtitle">System metrics control panel showcasing model execution parameters, feedback ratios, and complete audit tracking logs.</div>
+    <div class="section-card">
+        <div class="section-header">
+            <div class="section-icon icon-teal">📊</div>
+            <div>
+                <div class="section-title">Interaction Logs & Auditing</div>
+                <div class="section-desc">Full system metrics, feedback analysis, and exportable audit trails</div>
+            </div>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
     if not st.session_state.local_history:
-        st.info("No audit data captured. Please complete at least one generation session.")
+        st.info("No audit data captured yet. Run a generation session to populate the logs.")
     else:
-        # Aggregated Metrics Calculation
-        total_generations = len(st.session_state.local_history)
-        total_feedbacks = sum(len(item.get("feedbacks", [])) for item in st.session_state.local_history)
-        
-        likes = 0
-        dislikes = 0
-        comments_count = 0
-        
-        for item in st.session_state.local_history:
-            for fb in item.get("feedbacks", []):
-                if fb.get("rating") == "thumbs_up":
-                    likes += 1
-                elif fb.get("rating") == "thumbs_down":
-                    dislikes += 1
-                if fb.get("comment"):
-                    comments_count += 1
-                    
-        # Metric display row
-        st.markdown("<div class='module-card'>", unsafe_allow_html=True)
-        st.subheader("📈 System Metrics Overview")
-        m_col1, m_col2, m_col3, m_col4 = st.columns(4)
-        
-        with m_col1:
-            st.metric("Total API Requests", total_generations)
-        with m_col2:
-            st.metric("Logged Feedbacks", total_feedbacks)
-        with m_col3:
-            st.metric("👍 Total Likes", likes)
-        with m_col4:
-            st.metric("👎 Total Dislikes", dislikes)
-        st.markdown("</div>", unsafe_allow_html=True)
+        total_gen  = len(st.session_state.local_history)
+        total_fb   = sum(len(e.get("feedbacks", [])) for e in st.session_state.local_history)
+        total_like = sum(
+            sum(1 for f in e.get("feedbacks", []) if f.get("rating") == "thumbs_up")
+            for e in st.session_state.local_history)
+        total_dis  = sum(
+            sum(1 for f in e.get("feedbacks", []) if f.get("rating") == "thumbs_down")
+            for e in st.session_state.local_history)
 
-        # Auditing table
-        st.markdown("<div class='module-card'>", unsafe_allow_html=True)
-        st.subheader("📜 Detailed Audit Trails")
-        
-        audit_log = []
+        st.markdown("#### 📈 System Metrics Overview")
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Total API Requests", total_gen)
+        c2.metric("Total Feedbacks",    total_fb)
+        c3.metric("👍 Likes",            total_like)
+        c4.metric("👎 Dislikes",         total_dis)
+
+        st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
+        st.markdown("#### 📜 Complete Audit Trail")
+
+        audit_rows = []
         for entry in st.session_state.local_history:
             for s_idx, starter in enumerate(entry.get("starters", [])):
-                # Get feedback for this starter
-                starter_feedbacks = [fb for fb in entry.get("feedbacks", []) if fb.get("starter_index") == s_idx]
-                
-                feedback_str = "No Feedback"
-                comment_str = ""
-                if starter_feedbacks:
-                    fb_ratings = []
-                    fb_comments = []
-                    for f in starter_feedbacks:
-                        fb_ratings.append("👍" if f.get("rating") == "thumbs_up" else "👎")
-                        if f.get("comment"):
-                            fb_comments.append(f.get("comment"))
-                    feedback_str = ", ".join(fb_ratings)
-                    comment_str = " | ".join(fb_comments)
-                
-                audit_log.append({
-                    "Timestamp": entry.get("timestamp", "")[:19].replace("T", " "),
-                    "Relationship": entry.get("relationship", "").capitalize(),
-                    "Tone": entry.get("tone", "").capitalize(),
-                    "Suggested Starter": starter[:80] + "..." if len(starter) > 80 else starter,
-                    "Rating Value": feedback_str,
-                    "Auditor Notes": comment_str
+                fbs = [f for f in entry.get("feedbacks", []) if f.get("starter_index") == s_idx]
+                rating_str  = ", ".join("👍" if f["rating"] == "thumbs_up" else "👎" for f in fbs) or "—"
+                comment_str = " | ".join(f["comment"] for f in fbs if f.get("comment")) or "—"
+                audit_rows.append({
+                    "Timestamp":         entry.get("timestamp", "")[:19].replace("T", " "),
+                    "Relationship":      entry.get("relationship", "").capitalize(),
+                    "Tone":              entry.get("tone", "").capitalize(),
+                    "Starter (preview)": (starter[:75] + "…") if len(starter) > 75 else starter,
+                    "Rating":            rating_str,
+                    "Auditor Notes":     comment_str,
+                    "Transaction ID":    entry.get("id", ""),
                 })
-                
-        df_audit_full = pd.DataFrame(audit_log)
-        st.dataframe(df_audit_full, use_container_width=True)
-        
-        st.markdown("<div style='margin-top: 1rem;'></div>", unsafe_allow_html=True)
-        col_down_csv, _ = st.columns([1.5, 5])
-        with col_down_csv:
-            csv_data = df_audit_full.to_csv(index=False).encode('utf-8')
+
+        df_full = pd.DataFrame(audit_rows)
+        st.dataframe(df_full, use_container_width=True, hide_index=True)
+
+        st.markdown("<div style='height:0.75rem'></div>", unsafe_allow_html=True)
+        dl_c, ref_c, _ = st.columns([1.4, 1.4, 3])
+        with dl_c:
             st.download_button(
-                label="Download CSV Audit Log",
-                data=csv_data,
-                file_name=f"networking_assistant_audit_{datetime.datetime.now().strftime('%Y%m%d')}.csv",
+                "⬇  Download CSV Log",
+                data=df_full.to_csv(index=False).encode("utf-8"),
+                file_name=f"audit_{datetime.datetime.now().strftime('%Y%m%d_%H%M')}.csv",
                 mime="text/csv",
-                use_container_width=True
+                use_container_width=True,
             )
-        st.markdown("</div>", unsafe_allow_html=True)
+        with ref_c:
+            if st.button("↺  Refresh", use_container_width=True):
+                refresh_history()
+                st.toast("Logs refreshed!", icon="🔄")
