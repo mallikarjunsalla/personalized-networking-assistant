@@ -217,7 +217,12 @@ async def submit_feedback(payload: FeedbackRequest):
 
 @app.get("/")
 def root():
-    return {"service": "Personalized Networking Assistant API", "status": "running", "docs": "/docs", "health": "/health"}
+    return {
+        "service": "Personalized Networking Assistant API",
+        "status": "running",
+        "docs": "/docs",
+        "health": "/health",
+    }
 
 @app.get("/health")
 def health():
