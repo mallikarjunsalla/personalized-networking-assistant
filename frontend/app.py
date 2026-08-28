@@ -2,6 +2,7 @@ import datetime as dt
 import html
 import re
 import os
+
 from typing import Any
 
 import pandas as pd
@@ -17,8 +18,8 @@ st.set_page_config(
 
 BACKEND_URL = os.getenv(
     "BACKEND_URL",
-    "http://localhost:8000"
-)
+    st.secrets.get("BACKEND_URL", "http://localhost:8000")
+).rstrip("/")
 
 # -----------------------------------------------------------------------------
 # Session state
