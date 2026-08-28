@@ -260,97 +260,117 @@ class StarterGenerator:
 
 
 class FactChecker:
-    """Wikipedia-backed topic lookup with exact-title and search fallback."""
+    """Wikipedia-backed topic reference with exact-title and search fallback."""
 
     API_URL = "https://en.wikipedia.org/w/api.php"
-    HEADERS = {"User-Agent": "PersonalizedNetworkingAssistant/2.1"}
-
-    def verify_topic(self, query: str) -> dict:
-        query = _clean_phrase(query)
-        if not query:
-            return {"verified": False, "message": "Enter a topic to search.", "title": None, "summary": None, "source_url": None}
-
-        try:
-            # First try an exact/redirected article title.
-            params = {
-                "action": "query", "format": "json", "prop": "extracts",
-                "exintro": True, "explaintext": True, "titles": query,
-                "redirects": 1, "formatversion": 2,
-            }
-            response = requests.get(self.API_URL, params=params, headers=self.HEADERS, timeout=8)
-            response.raise_for_status()
-            data = response.json()
-            pages = data.get("query", {}).get("pages", [])
-            if isinstance(pages, dict):
-                pages = list(pages.values())
-            for page in pages:
-                if page.get("pageid") is not None and not page.get("missing"):
-                    return self._result(page)
-
-            # Fallback to Wikipedia search so natural phrases don't fail just
-            # because they are not exact article titles (e.g. "blockchain in healthcare").
-            search_params = {
-                "action": "query", "format": "json", "list": "search",
-                "srsearch": query, "srlimit": 5, "utf8": 1, "formatversion": 2,
-            }
-            search_response = requests.get(self.API_URL, params=search_params, headers=self.HEADERS, timeout=8)
-            search_response.raise_for_status()
-            search_data = search_response.json()
-            matches = search_data.get("query", {}).get("search", [])
-
-            if not matches:
-                return {
-                    "verified": False,
-                    "message": f"No relevant Wikipedia article was found for '{query}'. Try a shorter or more specific topic.",
-                    "title": None, "summary": None, "source_url": None,
-                }
-
-            title = matches[0].get("title", query)
-            detail_params = {
-                "action": "query", "format": "json", "prop": "extracts",
-                "exintro": True, "explaintext": True, "titles": title,
-                "redirects": 1, "formatversion": 2,
-            }
-            detail_response = requests.get(self.API_URL, params=detail_params, headers=self.HEADERS, timeout=8)
-            detail_response.raise_for_status()
-            detail_data = detail_response.json()
-            detail_pages = detail_data.get("query", {}).get("pages", [])
-            if isinstance(detail_pages, dict):
-                detail_pages = list(detail_pages.values())
-            for page in detail_pages:
-                if page.get("pageid") is not None and not page.get("missing"):
-                    result = self._result(page)
-                    result["message"] = f"Wikipedia reference found for '{query}' via search: '{result['title']}'."
-                    return result
-
-            return {
-                "verified": False, "message": f"A search result was found, but no article summary was available for '{query}'.",
-                "title": title, "summary": None, "source_url": None,
-            }
-        except requests.RequestException as exc:
-            logger.warning("Wikipedia request failed: %s", exc)
-            return {
-                "verified": False,
-                "message": "Wikipedia could not be reached right now. Please try again.",
-                "title": None, "summary": None, "source_url": None,
-            }
-        except Exception as exc:
-            logger.exception("Unexpected fact-check error")
-            return {
-                "verified": False,
-                "message": f"Fact-check lookup failed: {exc}",
-                "title": None, "summary": None, "source_url": None,
-            }
+    HEADERS = {"User-Agent": "PersonalizedNetworkingAssistant/3.0"}
 
     @staticmethod
-    def _result(page: dict) -> dict:
-        title = page.get("title") or "Wikipedia article"
-        source_url = "https://en.wikipedia.org/wiki/" + requests.utils.quote(title.replace(" ", "_"))
-        summary = (page.get("extract") or "No introductory summary is available.").strip()
-        return {
-            "verified": True,
-            "message": f"Wikipedia reference found: '{title}'.",
+    def _result(
+        verified: bool,
+        message: str,
+        title: Optional[str] = None,
+        summary: Optional[str] = None,
+        source_url: Optional[str] = None,
+        matches: Optional[list[dict]] = None,
+    ) -> dict:
+        payload = {
+            "verified": verified,
+            "message": message,
             "title": title,
             "summary": summary,
             "source_url": source_url,
         }
+        if matches is not None:
+            payload["matches"] = matches
+        return payload
+
+    def _article_from_title(self, title: str) -> Optional[dict]:
+        params = {
+            "action": "query",
+            "format": "json",
+            "prop": "extracts",
+            "exintro": True,
+            "explaintext": True,
+            "redirects": 1,
+            "titles": title,
+        }
+        response = requests.get(self.API_URL, params=params, headers=self.HEADERS, timeout=8)
+        response.raise_for_status()
+        pages = response.json().get("query", {}).get("pages", {})
+        for page_id, page_data in pages.items():
+            if page_id == "-1":
+                continue
+            real_title = _clean_phrase(page_data.get("title", title))
+            summary = _clean_phrase(page_data.get("extract", "No summary available."))
+            safe_title = requests.utils.quote(real_title.replace(" ", "_"))
+            return {
+                "title": real_title,
+                "summary": summary,
+                "source_url": f"https://en.wikipedia.org/wiki/{safe_title}",
+            }
+        return None
+
+    def _search_titles(self, query: str, limit: int = 5) -> list[str]:
+        params = {
+            "action": "query",
+            "format": "json",
+            "list": "search",
+            "srsearch": query,
+            "srlimit": limit,
+            "srprop": "",
+        }
+        response = requests.get(self.API_URL, params=params, headers=self.HEADERS, timeout=8)
+        response.raise_for_status()
+        return [
+            _clean_phrase(item.get("title", ""))
+            for item in response.json().get("query", {}).get("search", [])
+            if _clean_phrase(item.get("title", ""))
+        ]
+
+    def verify_topic(self, query: str) -> dict:
+        query = _clean_phrase(query)
+        if not query:
+            return self._result(False, "Enter a topic to check.")
+
+        try:
+            # First try an exact title / redirect.
+            exact = self._article_from_title(query)
+            if exact:
+                return self._result(
+                    True,
+                    "A matching Wikipedia article was found. Use it as a quick reference; it is not a substitute for authoritative verification.",
+                    **exact,
+                )
+
+            # Then use Wikipedia's search API for natural-language topics.
+            titles = self._search_titles(query, limit=5)
+            if not titles:
+                return self._result(
+                    False,
+                    f"No useful Wikipedia result was found for '{query}'. Try a shorter or more specific topic.",
+                )
+
+            for title in titles:
+                article = self._article_from_title(title)
+                if article:
+                    return self._result(
+                        True,
+                        f"Wikipedia search found a related article for '{query}'. Use it as a quick reference; it is not a substitute for authoritative verification.",
+                        **article,
+                        matches=[{"title": t} for t in titles],
+                    )
+
+            return self._result(
+                False,
+                f"Wikipedia returned results for '{query}', but no readable article summary was available.",
+                matches=[{"title": t} for t in titles],
+            )
+
+        except requests.RequestException as exc:
+            logger.warning("Wikipedia request failed: %s", exc)
+            return self._result(
+                False,
+                "Wikipedia could not be reached right now. Try again when the connection is available.",
+            )
+
