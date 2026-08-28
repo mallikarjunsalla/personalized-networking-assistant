@@ -1,6 +1,5 @@
 import datetime as dt
 import html
-import os
 import re
 from typing import Any
 
@@ -15,7 +14,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-BACKEND_URL = os.getenv("BACKEND_URL", st.secrets.get("BACKEND_URL", "http://localhost:8000"))
+BACKEND_URL = "http://localhost:8000"
 
 # -----------------------------------------------------------------------------
 # Session state
@@ -91,7 +90,23 @@ def css():
 }}
 html, body, [class*="css"], .stApp {{ font-family:Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important; }}
 .stApp {{ background:var(--bg) !important; color:var(--text) !important; }}
-header[data-testid="stHeader"] {{ display:none !important; }}
+header[data-testid="stHeader"] {{
+  display:block !important;
+  background:transparent !important;
+  height:2.35rem !important;
+}}
+header[data-testid="stHeader"] button[aria-label="Collapse sidebar"],
+header[data-testid="stHeader"] button[aria-label="Expand sidebar"] {{
+  width:34px !important;
+  height:34px !important;
+  border-radius:9px !important;
+  background:var(--surface) !important;
+  border:1px solid var(--border) !important;
+  color:var(--text) !important;
+  box-shadow:0 4px 12px rgba(15,23,42,.08) !important;
+  margin-left:8px !important;
+}}
+
 .stAppDeployButton, .viewerBadge_container__r5tak {{ display:none !important; }}
 .block-container {{ max-width:1450px !important; padding:0.8rem 2rem 4rem !important; }}
 
@@ -116,10 +131,13 @@ header[data-testid="stHeader"] {{ display:none !important; }}
 .user-email {{ font-size:.65rem;color:var(--muted);margin-top:.08rem;max-width:145px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }}
 
 /* Login page */
-.login-page {{ max-width:760px; margin:2.4rem auto 1.4rem; text-align:center; }}
-.login-kicker {{ color:var(--accent); font-size:.66rem; font-weight:900; letter-spacing:.15em; }}
-.login-title-main {{ color:var(--text); font-size:2rem; line-height:1.15; font-weight:900; margin-top:.45rem; }}
-.login-sub-main {{ color:var(--muted); font-size:.84rem; line-height:1.55; margin-top:.55rem; }}
+.login-page {{ max-width:720px; margin:2.8rem auto 1.5rem; text-align:center; }}
+.login-card {{ background:var(--surface); border:1px solid var(--border); border-radius:18px; padding:2rem; box-shadow:0 12px 32px rgba(15,23,42,.08); }}
+.login-icon {{ width:58px; height:58px; margin:0 auto .8rem; border-radius:16px; background:var(--accent-soft); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:1.55rem; }}
+.login-kicker {{ color:var(--accent); font-size:.66rem; font-weight:900; letter-spacing:.14em; text-transform:uppercase; }}
+.login-title-main {{ color:var(--text); font-size:1.85rem; font-weight:900; margin:.35rem 0 .45rem; }}
+.login-sub-main {{ color:var(--muted); font-size:.82rem; line-height:1.5; max-width:500px; margin:0 auto 1rem; }}
+.login-note {{ color:var(--muted); font-size:.68rem; margin-top:.75rem; }}
 
 /* Sidebar */
 section[data-testid="stSidebar"] {{ background:var(--sidebar) !important;border-right:1px solid var(--border) !important; }}
@@ -255,6 +273,28 @@ EXAMPLE = {
 }
 
 
+def apply_example() -> None:
+    """Populate widget-backed inputs from a button callback.
+
+    Streamlit callbacks run before the next script rerun, which makes it safe
+    to update widget keys here. Updating those keys later in the same run
+    after the widgets have been instantiated raises StreamlitAPIException.
+    """
+    for key, value in EXAMPLE.items():
+        st.session_state[key] = value
+    st.session_state.current_generation = None
+
+
+def apply_saved_setup(parsed: dict[str, str]) -> None:
+    """Restore saved widget values from a button callback."""
+    st.session_state.interests_input = parsed.get("interests", "")
+    st.session_state.event_input = parsed.get("event", "")
+    st.session_state.goal_input = parsed.get("goal", "")
+    st.session_state.person_input = parsed.get("person", "")
+    st.session_state.current_generation = None
+    st.session_state.workspace = "Generate Starters"
+
+
 # -----------------------------------------------------------------------------
 # Sidebar + topbar
 # -----------------------------------------------------------------------------
@@ -267,15 +307,13 @@ def render_sidebar() -> None:
         st.markdown('<div class="sidebar-divider"></div>', unsafe_allow_html=True)
 
         if not st.session_state.logged_in:
-            st.markdown('<div class="nav-title">Welcome</div>', unsafe_allow_html=True)
+            st.markdown('<div class="nav-title">Workspace</div>', unsafe_allow_html=True)
             st.markdown(
-                '<div class="field-help">Sign in from the main panel to access your networking workspace.</div>',
+                '<div class="panel-sub">The sidebar can be collapsed or expanded at any time. '
+                'Sign in from the main panel.</div>',
                 unsafe_allow_html=True,
             )
-            st.markdown(
-                '<div class="sidebar-status">🔒 Login required</div>',
-                unsafe_allow_html=True,
-            )
+            st.markdown('<div class="sidebar-status">🔐 Login required</div>', unsafe_allow_html=True)
             return
 
         st.markdown('<div class="nav-title">Navigation</div>', unsafe_allow_html=True)
@@ -342,23 +380,6 @@ def render_topbar(healthy: bool) -> None:
 ''',
         unsafe_allow_html=True,
     )
-
-
-# -----------------------------------------------------------------------------
-# Widget callbacks
-# -----------------------------------------------------------------------------
-def apply_example() -> None:
-    for key, value in EXAMPLE.items():
-        st.session_state[key] = value
-    st.session_state.current_generation = None
-
-def load_saved_setup(parsed: dict[str, str]) -> None:
-    st.session_state.interests_input = parsed.get("interests", "")
-    st.session_state.event_input = parsed.get("event", "")
-    st.session_state.goal_input = parsed.get("goal", "")
-    st.session_state.person_input = parsed.get("person", "")
-    st.session_state.current_generation = None
-    st.session_state.workspace = "Generate Starters"
 
 
 # -----------------------------------------------------------------------------
@@ -492,7 +513,12 @@ def render_generate() -> None:
 
     e1, e2, _ = st.columns([1.1, 1.55, 3])
     with e1:
-        st.button("✨ Try this example", use_container_width=True, key="try_example", on_click=apply_example)
+        st.button(
+            "✨ Try this example",
+            use_container_width=True,
+            key="try_example",
+            on_click=apply_example,
+        )
     with e2:
         if st.button("✨ Generate 2–3 conversation starters", type="primary", use_container_width=True, key="generate"):
             generate_request()
@@ -660,7 +686,7 @@ def render_saved_profiles() -> None:
                 "Use this setup",
                 key=f"use_profile_{index}",
                 use_container_width=False,
-                on_click=load_saved_setup,
+                on_click=apply_saved_setup,
                 args=(parsed,),
             )
 
@@ -723,34 +749,59 @@ def render_history() -> None:
         )
 
 
+
 # -----------------------------------------------------------------------------
-# Main
+# Login page
 # -----------------------------------------------------------------------------
 def render_login_page() -> None:
     st.markdown(
-        '<div class="login-page">'
-        '<div class="login-kicker">PERSONALIZED NETWORKING ASSISTANT</div>'
-        '<div class="login-title-main">Turn introductions into better conversations.</div>'
-        '<div class="login-sub-main">Sign in to prepare event-specific conversation starters, verify topics, and review your networking history.</div>'
-        '</div>',
+        """
+        <div class="login-page">
+          <div class="login-card">
+            <div class="login-icon">🤝</div>
+            <div class="login-kicker">Personalized Networking Assistant</div>
+            <div class="login-title-main">Welcome back</div>
+            <div class="login-sub-main">
+              Sign in to prepare event-specific conversation starters, check topics,
+              reuse saved setups, and review your networking history.
+            </div>
+          </div>
+        </div>
+        """,
         unsafe_allow_html=True,
     )
-    left, center, right = st.columns([1.2, 1.4, 1.2])
+
+    _, center, _ = st.columns([1.15, 1.8, 1.15])
     with center:
         with st.container(border=True):
             st.markdown('<div class="panel-title">Sign in</div>', unsafe_allow_html=True)
-            st.markdown('<div class="panel-sub">Use any non-empty email and password for this demo.</div>', unsafe_allow_html=True)
-            email = st.text_input("Email", placeholder="you@example.com", key="login_email_main")
-            password = st.text_input("Password", type="password", placeholder="••••••••", key="login_password_main")
-            if st.button("Sign in →", type="primary", use_container_width=True, key="main_signin"):
+            st.markdown(
+                '<div class="panel-sub" style="margin-bottom:.8rem;">'
+                'Demo login: use any non-empty email and password.</div>',
+                unsafe_allow_html=True,
+            )
+            email = st.text_input("Email", placeholder="you@example.com", key="login_email")
+            password = st.text_input("Password", type="password", placeholder="••••••••", key="login_password")
+            if st.button("Sign in to NetworkAI", type="primary", use_container_width=True, key="login_submit"):
                 if email.strip() and password.strip():
                     st.session_state.logged_in = True
-                    st.session_state.user_email = email.strip().lower()
+                    st.session_state.user_email = email.strip()
+                    st.session_state.workspace = "Generate Starters"
                     refresh_history()
                     st.rerun()
                 else:
                     st.error("Enter both email and password.")
 
+    st.markdown(
+        '<div class="login-note" style="text-align:center;">'
+        'The sidebar can be collapsed with the corner control and reopened from the same control.'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+# -----------------------------------------------------------------------------
+# Main
+# -----------------------------------------------------------------------------
 render_sidebar()
 
 if not st.session_state.logged_in:
