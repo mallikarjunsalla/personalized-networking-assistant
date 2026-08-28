@@ -156,6 +156,19 @@ header[data-testid="stHeader"] button[aria-label="Expand sidebar"]::after {{
 .login-sub-main {{ color:var(--muted); font-size:.82rem; line-height:1.5; max-width:500px; margin:0 auto 1rem; }}
 .login-note {{ color:var(--muted); font-size:.68rem; margin-top:.75rem; }}
 
+/* Pre-login dashboard */
+.prelogin {{ max-width:980px; margin:2.2rem auto 0; }}
+.prelogin-hero {{ background:var(--surface); border:1px solid var(--border); border-radius:18px; padding:2.2rem; text-align:center; box-shadow:0 10px 28px rgba(15,23,42,.06); }}
+.prelogin-icon {{ width:64px;height:64px;border-radius:16px;background:var(--accent-soft);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1.65rem;margin:0 auto .8rem; }}
+.prelogin-title {{ color:var(--text);font-size:2rem;font-weight:900;line-height:1.15; }}
+.prelogin-sub {{ color:var(--muted);font-size:.88rem;line-height:1.55;max-width:650px;margin:.55rem auto 0; }}
+.feature-grid {{ display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-top:1rem; }}
+.feature-card {{ background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.05rem;text-align:left; }}
+.feature-icon {{ font-size:1.1rem; }}
+.feature-title {{ color:var(--text);font-weight:850;margin-top:.35rem;font-size:.84rem; }}
+.feature-desc {{ color:var(--muted);font-size:.72rem;line-height:1.45;margin-top:.2rem; }}
+@media (max-width: 820px) {{ .feature-grid {{ grid-template-columns:1fr; }} }}
+
 /* Sidebar */
 section[data-testid="stSidebar"] {{ background:var(--sidebar) !important;border-right:1px solid var(--border) !important; }}
 section[data-testid="stSidebar"] > div:first-child {{ padding:.8rem .85rem 1rem !important; }}
@@ -793,6 +806,40 @@ def render_history() -> None:
 render_sidebar()
 
 if not st.session_state.logged_in:
+    st.markdown(
+        """
+        <div class="prelogin">
+          <div class="prelogin-hero">
+            <div class="prelogin-icon">🤝</div>
+            <div class="prelogin-title">Personalized Networking Assistant</div>
+            <div class="prelogin-sub">
+              Prepare natural conversation openers for professional and technology events,
+              verify topics quickly, and review the networking strategies that worked for you.
+              Sign in from the left sidebar to begin.
+            </div>
+          </div>
+
+          <div class="feature-grid">
+            <div class="feature-card">
+              <div class="feature-icon">🤖</div>
+              <div class="feature-title">Generate Starters</div>
+              <div class="feature-desc">Use your interests and event context to prepare 2–3 natural opening questions.</div>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">🔎</div>
+              <div class="feature-title">Quick Fact Check</div>
+              <div class="feature-desc">Look up a topic with Wikipedia as a quick reference before or during an event.</div>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">📜</div>
+              <div class="feature-title">History & Feedback</div>
+              <div class="feature-desc">Review past networking sessions and see which starters you found useful.</div>
+            </div>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
     st.stop()
 
 healthy = api_health()
