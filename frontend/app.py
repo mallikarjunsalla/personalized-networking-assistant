@@ -116,10 +116,10 @@ header[data-testid="stHeader"] {{ display:none !important; }}
 .user-email {{ font-size:.65rem;color:var(--muted);margin-top:.08rem;max-width:145px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }}
 
 /* Login page */
-.login-page { max-width:760px; margin:2.4rem auto 1.4rem; text-align:center; }
-.login-kicker { color:var(--accent); font-size:.66rem; font-weight:900; letter-spacing:.15em; }
-.login-title-main { color:var(--text); font-size:2rem; line-height:1.15; font-weight:900; margin-top:.45rem; }
-.login-sub-main { color:var(--muted); font-size:.84rem; line-height:1.55; margin-top:.55rem; }
+.login-page {{ max-width:760px; margin:2.4rem auto 1.4rem; text-align:center; }}
+.login-kicker {{ color:var(--accent); font-size:.66rem; font-weight:900; letter-spacing:.15em; }}
+.login-title-main {{ color:var(--text); font-size:2rem; line-height:1.15; font-weight:900; margin-top:.45rem; }}
+.login-sub-main {{ color:var(--muted); font-size:.84rem; line-height:1.55; margin-top:.55rem; }}
 
 /* Sidebar */
 section[data-testid="stSidebar"] {{ background:var(--sidebar) !important;border-right:1px solid var(--border) !important; }}
