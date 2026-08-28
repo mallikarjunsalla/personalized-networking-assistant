@@ -214,6 +214,11 @@ async def submit_feedback(payload: FeedbackRequest):
     raise HTTPException(status_code=404, detail="Generated starters history record not found.")
 
 
+
+@app.get("/")
+def root():
+    return {"service": "Personalized Networking Assistant API", "status": "running", "docs": "/docs", "health": "/health"}
+
 @app.get("/health")
 def health():
     return {"status": "healthy", "service": "personalized-networking-assistant"}
