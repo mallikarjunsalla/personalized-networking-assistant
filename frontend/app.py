@@ -105,6 +105,23 @@ header[data-testid="stHeader"] button[aria-label="Expand sidebar"] {{
   color:var(--text) !important;
   box-shadow:0 4px 12px rgba(15,23,42,.08) !important;
   margin-left:8px !important;
+  position:relative !important;
+}}
+header[data-testid="stHeader"] button[aria-label="Collapse sidebar"] svg,
+header[data-testid="stHeader"] button[aria-label="Expand sidebar"] svg {{
+  display:none !important;
+}}
+header[data-testid="stHeader"] button[aria-label="Collapse sidebar"]::after,
+header[data-testid="stHeader"] button[aria-label="Expand sidebar"]::after {{
+  content:"≪" !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  width:100% !important;
+  height:100% !important;
+  font-size:1.05rem !important;
+  font-weight:900 !important;
+  line-height:1 !important;
 }}
 
 .stAppDeployButton, .viewerBadge_container__r5tak {{ display:none !important; }}
@@ -307,13 +324,33 @@ def render_sidebar() -> None:
         st.markdown('<div class="sidebar-divider"></div>', unsafe_allow_html=True)
 
         if not st.session_state.logged_in:
-            st.markdown('<div class="nav-title">Workspace</div>', unsafe_allow_html=True)
-            st.markdown(
-                '<div class="panel-sub">The sidebar can be collapsed or expanded at any time. '
-                'Sign in from the main panel.</div>',
-                unsafe_allow_html=True,
+            st.markdown('<div class="nav-title">Sign in</div>', unsafe_allow_html=True)
+            email = st.text_input(
+                "Email",
+                placeholder="you@example.com",
+                key="login_email",
             )
-            st.markdown('<div class="sidebar-status">🔐 Login required</div>', unsafe_allow_html=True)
+            password = st.text_input(
+                "Password",
+                type="password",
+                placeholder="••••••••",
+                key="login_password",
+            )
+            if st.button(
+                "Sign in to NetworkAI",
+                type="primary",
+                use_container_width=True,
+                key="login_submit",
+            ):
+                if email.strip() and password.strip():
+                    st.session_state.logged_in = True
+                    st.session_state.user_email = email.strip()
+                    st.session_state.workspace = "Generate Starters"
+                    refresh_history()
+                    st.rerun()
+                else:
+                    st.error("Enter both email and password.")
+            st.caption("Demo login: use any non-empty email and password.")
             return
 
         st.markdown('<div class="nav-title">Navigation</div>', unsafe_allow_html=True)
@@ -751,61 +788,11 @@ def render_history() -> None:
 
 
 # -----------------------------------------------------------------------------
-# Login page
-# -----------------------------------------------------------------------------
-def render_login_page() -> None:
-    st.markdown(
-        """
-        <div class="login-page">
-          <div class="login-card">
-            <div class="login-icon">🤝</div>
-            <div class="login-kicker">Personalized Networking Assistant</div>
-            <div class="login-title-main">Welcome back</div>
-            <div class="login-sub-main">
-              Sign in to prepare event-specific conversation starters, check topics,
-              reuse saved setups, and review your networking history.
-            </div>
-          </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    _, center, _ = st.columns([1.15, 1.8, 1.15])
-    with center:
-        with st.container(border=True):
-            st.markdown('<div class="panel-title">Sign in</div>', unsafe_allow_html=True)
-            st.markdown(
-                '<div class="panel-sub" style="margin-bottom:.8rem;">'
-                'Demo login: use any non-empty email and password.</div>',
-                unsafe_allow_html=True,
-            )
-            email = st.text_input("Email", placeholder="you@example.com", key="login_email")
-            password = st.text_input("Password", type="password", placeholder="••••••••", key="login_password")
-            if st.button("Sign in to NetworkAI", type="primary", use_container_width=True, key="login_submit"):
-                if email.strip() and password.strip():
-                    st.session_state.logged_in = True
-                    st.session_state.user_email = email.strip()
-                    st.session_state.workspace = "Generate Starters"
-                    refresh_history()
-                    st.rerun()
-                else:
-                    st.error("Enter both email and password.")
-
-    st.markdown(
-        '<div class="login-note" style="text-align:center;">'
-        'The sidebar can be collapsed with the corner control and reopened from the same control.'
-        '</div>',
-        unsafe_allow_html=True,
-    )
-
-# -----------------------------------------------------------------------------
 # Main
 # -----------------------------------------------------------------------------
 render_sidebar()
 
 if not st.session_state.logged_in:
-    render_login_page()
     st.stop()
 
 healthy = api_health()
